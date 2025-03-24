@@ -1,0 +1,26 @@
+/* 清除主题预设，避免代码块背景、边框、阴影出现在暗黑主题中 */
+pre,
+code,
+pre code,
+.highlight {
+    background: inherit !important;
+    color: inherit !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* 针对暗黑模式设置专属代码样式 */
+body.dark-theme pre,
+body.dark-theme code,
+body.dark-theme .highlight {
+    background: #0d1117 !important;   /* GitHub Dark 背景色 */
+    color: #c9d1d9 !important;        /* GitHub Dark 字体颜色 */
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* 防止代码容器的左右滚动区域出现白边 */
+body.dark-theme pre::-webkit-scrollbar-track,
+body.dark-theme code::-webkit-scrollbar-track {
+    background: #0d1117 !important;
+}
