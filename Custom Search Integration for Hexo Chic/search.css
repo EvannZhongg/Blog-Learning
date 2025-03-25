@@ -1,0 +1,119 @@
+/* 搜索框容器 */
+.search-container {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 10px;
+}
+.search-container a {
+  padding-right: 6px;
+  cursor: pointer;
+  font-size: 1.1em;
+}
+
+.nav-search-input {
+  display: none;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 260px;
+  transition: all 0.3s ease;
+  vertical-align: middle;
+}
+.nav-search-input.active {
+  display: inline-block;
+}
+
+.nav-search-result {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-top: 6px;
+  padding: 0.4em;
+  min-width: 260px;
+  max-height: 360px;
+  overflow-y: auto;
+  display: none;
+  z-index: 999;
+}
+
+/* 搜索卡片 */
+.search-card {
+  padding: 4px 6px;
+  margin-bottom: 3px;
+  border-bottom: 1px solid #eee;
+  transition: background 0.2s;
+}
+.search-card:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+.search-card:hover {
+  background: #f9f9f9;
+}
+.search-card-title {
+  display: block;
+  font-weight: bold;
+  color: #1a0dab;
+  font-size: 1em;
+  line-height: 1.2em;
+  text-decoration: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+.search-card-title:hover {
+  text-decoration: underline;
+}
+.search-card-snippet {
+  font-size: 0.88em;
+  color: #444;
+  margin-top: 2px;
+  line-height: 1.3em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 🌙 暗色主题适配 */
+.dark-theme .nav-search-input {
+  background-color: #1e1e1e;
+  color: #eee;
+  border: 1px solid #555;
+}
+.dark-theme .nav-search-result {
+  background-color: #2a2a2a;
+  color: #eee;
+  border: 1px solid #555;
+}
+.dark-theme .search-card {
+  border-bottom: 1px solid #444;
+}
+.dark-theme .search-card:hover {
+  background: #333;
+}
+.dark-theme .search-card-title {
+  color: #4ea1ff;
+}
+.dark-theme .search-card-snippet {
+  color: #ccc;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .nav-search-input {
+    width: 90%;
+    display: block;
+    margin: 10px auto;
+  }
+  .nav-search-result {
+    position: static;
+    width: 90%;
+    margin: 0 auto;
+  }
+}
