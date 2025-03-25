@@ -13,25 +13,24 @@
     const script = document.createElement('script');
     script.src = 'https://giscus.app/client.js';
 
-        // 替换为你的 GitHub 仓库信息（格式：username/repo）
-        script.setAttribute('data-repo', 'your-github-username/your-repo-name');
+    // 替换为你的 GitHub 仓库信息（格式：username/repo）
+    script.setAttribute('data-repo', 'your-github-username/your-repo-name');
 
-        // 替换为你的 repo-id 和 category-id（在 giscus.app 配置页面生成）
-        script.setAttribute('data-repo-id', 'your-repo-id');
-        script.setAttribute('data-category', 'your-category-name');
-        script.setAttribute('data-category-id', 'your-category-id');
+    // 替换为你的 repo-id 和 category-id（在 giscus.app 配置页面生成）
+    script.setAttribute('data-repo-id', 'your-repo-id');
+    script.setAttribute('data-category', 'your-category-name');
+    script.setAttribute('data-category-id', 'your-category-id');
 
-        // 其他常规推荐设置
-        script.setAttribute('data-mapping', 'pathname');           // 用页面路径匹配评论帖
-        script.setAttribute('data-strict', '0');                   // 若无匹配帖则创建新帖
-        script.setAttribute('data-reactions-enabled', '1');        // 启用表情反应
-        script.setAttribute('data-emit-metadata', '0');            // 不输出元数据
-        script.setAttribute('data-input-position', 'top');         // 输入框在评论上方
-        script.setAttribute('data-theme', theme);                  // 设置为 'light' 或 'dark'
-        script.setAttribute('data-lang', 'zh-CN');                 // 中文界面
-        script.setAttribute('crossorigin', 'anonymous');           // 跨域资源安全
-        script.async = true;                                       // 异步加载
-
+    // 其他常规推荐设置
+    script.setAttribute('data-mapping', 'pathname');           
+    script.setAttribute('data-strict', '0');                 
+    script.setAttribute('data-reactions-enabled', '1');        
+    script.setAttribute('data-emit-metadata', '0');          
+    script.setAttribute('data-input-position', 'top');        
+    script.setAttribute('data-theme', theme);                 
+    script.setAttribute('data-lang', 'zh-CN');            
+    script.setAttribute('crossorigin', 'anonymous');          
+    script.async = true;                                  
 
     giscusContainer.appendChild(script);
   }
