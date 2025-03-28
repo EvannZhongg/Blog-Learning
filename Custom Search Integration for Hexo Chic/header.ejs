@@ -1,143 +1,101 @@
-<header>
-  <nav class="navbar">
-    <div class="container">
-      <div class="navbar-header header-logo"><a href="<%- config.root %>"><%= theme.navname %></a></div>
-      <div class="menu navbar-right">
-        <% for (var i in theme.nav){ %>
-          <a class="menu-item" href="<%- url_for(theme.nav[i]) %>"><%= i %></a>
-        <% } %>
+<div class="search-popup">
+  <div class="search-overlay" onclick="closeSearchPopup()"></div>
+  <div class="search-box">
+    <input type="text" id="search-input" placeholder="Search..." autofocus>
+    <div id="search-result" class="search-result-list"></div>
+  </div>
+</div>
 
-        <!-- ✅ 搜索图标与输入框 -->
-        <div class="search-container">
-          <a href="javascript:;" onclick="toggleSearchInput()">🔍</a>
-          <input type="text" id="nav-search-input" class="nav-search-input" placeholder="Search..." oninput="navSearch(this)">
-          <div id="nav-search-result" class="nav-search-result"></div>
-        </div>
-
-        <!-- ✅ 主题切换按钮 -->
-        <input id="switch_default" type="checkbox" class="switch_default">
-        <label for="switch_default" class="toggleBtn"></label>
-      </div>
-    </div>
-  </nav>
-
-  <!-- ✅ 移动端 -->
-  <nav class="navbar-mobile" id="nav-mobile">
-    <div class="container">
-      <div class="navbar-header">
-        <div>
-          <a href="<%- config.root %>"><%= theme.navname %></a><a id="mobile-toggle-theme">·&nbsp;Light</a>
-        </div>
-        <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
-      </div>
-      <div class="menu" id="mobile-menu">
-        <% for (var i in theme.nav){ %>
-          <a class="menu-item" href="<%- url_for(theme.nav[i]) %>"><%= i %></a>
-        <% } %>
-        <a class="menu-item" href="javascript:;" onclick="toggleSearchInput()">🔍 Search</a>
-        <input type="text" id="nav-search-input-mobile" class="nav-search-input" placeholder="Search..." oninput="navSearch(this)">
-        <div id="nav-search-result" class="nav-search-result"></div>
-      </div>
-    </div>
-  </nav>
-</header>
-
+<!-- 加载本地 search.xml 数据 -->
 <script>
-  var mobileBtn = function f() {
-    var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
-    var mobileMenu = document.getElementById("mobile-menu");
-    if (toggleMenu.classList.contains("active")) {
-      toggleMenu.classList.remove("active");
-      mobileMenu.classList.remove("active");
-    } else {
-      toggleMenu.classList.add("active");
-      mobileMenu.classList.add("active");
-    }
-  }
+function closeSearchPopup() {
+  document.querySelector('.search-popup').classList.remove('active');
+}
 
+document.addEventListener("DOMContentLoaded", function () {
+  const input = document.getElementById('search-input');
+  const resultContainer = document.getElementById('search-result');
   let searchData = [];
 
-  function toggleSearchInput() {
-    const inputs = document.querySelectorAll('.nav-search-input');
-    const results = document.querySelectorAll('.nav-search-result');
-
-    inputs.forEach(input => {
-      input.classList.toggle('active');
-      if (input.classList.contains('active')) input.focus();
+  // 加载 search.xml 并解析数据
+  fetch('<%- config.root %>search.xml')
+    .then(res => res.text())
+    .then(xmlText => {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(xmlText, 'text/xml');
+      const entries = xml.getElementsByTagName('entry');
+      for (let entry of entries) {
+        searchData.push({
+          title: entry.getElementsByTagName('title')[0]?.textContent || '',
+          content: entry.getElementsByTagName('content')[0]?.textContent || '',
+          url: entry.getElementsByTagName('url')[0]?.textContent || ''
+        });
+      }
     });
 
-    results.forEach(r => r.style.display = 'none');
-
-    if (searchData.length === 0) {
-      fetch('<%- config.root %>search.xml')
-        .then(res => res.text())
-        .then(xmlText => {
-          const parser = new DOMParser();
-          const xml = parser.parseFromString(xmlText, 'text/xml');
-          const entries = xml.getElementsByTagName('entry');
-          for (let entry of entries) {
-            searchData.push({
-              title: entry.getElementsByTagName('title')[0]?.textContent || '',
-              content: entry.getElementsByTagName('content')[0]?.textContent || '',
-              url: entry.getElementsByTagName('url')[0]?.textContent || ''
-            });
-          }
-        });
-    }
-  }
-
-  function navSearch(inputElem) {
-    const keyword = inputElem.value.trim().toLowerCase();
-    const resultContainer = inputElem.nextElementSibling;
+  // 搜索逻辑绑定
+  input.addEventListener('input', function () {
+    const keyword = this.value.trim().toLowerCase();
     resultContainer.innerHTML = '';
-
-    if (!keyword) {
-      resultContainer.style.display = 'none';
-      return;
-    }
+    if (!keyword) return;
 
     const results = searchData.filter(data =>
       data.title.toLowerCase().includes(keyword) ||
       data.content.toLowerCase().includes(keyword)
-    ).slice(0, 8);
+    );
 
     if (results.length === 0) {
       resultContainer.innerHTML = '<p>No results found.</p>';
-    } else {
-      resultContainer.innerHTML = results.map(item => {
-        const snippet = item.content.replace(/<[^>]+>/g, '').slice(0, 200);
-        return `
-          <div class="search-card">
-            <a class="search-card-title" href="${item.url}" target="_blank">${item.title}</a>
-            <div class="search-card-snippet">${snippet}</div>
-          </div>
-        `;
-      }).join('');
+      return;
     }
 
-    resultContainer.style.display = 'block';
-  }
-
-  // ✅ 点击空白关闭搜索框并清空
-  document.addEventListener('click', function (e) {
-    const searchAreas = document.querySelectorAll('.search-container');
-    let clickedInsideSearch = false;
-
-    searchAreas.forEach(area => {
-      if (area.contains(e.target)) {
-        clickedInsideSearch = true;
-      }
-    });
-
-    if (!clickedInsideSearch) {
-      document.querySelectorAll('.nav-search-input').forEach(input => {
-        input.classList.remove('active');
-        input.value = ''; // 清空
-      });
-      document.querySelectorAll('.nav-search-result').forEach(result => {
-        result.style.display = 'none';
-      });
-    }
+    const html = results.map(item => {
+      return `<p><a href="${item.url}">${item.title}</a></p>`;
+    }).join('');
+    resultContainer.innerHTML = html;
   });
+});
 </script>
 
+<style>
+.search-popup {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+.search-popup.active {
+  display: block;
+}
+.search-overlay {
+  position: absolute;
+  inset: 0;
+}
+.search-box {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  padding: 2em;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 600px;
+}
+#search-input {
+  width: 100%;
+  padding: 0.8em;
+  font-size: 1.1em;
+  margin-bottom: 1em;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.search-result-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.search-result-list p {
+  margin: 0.5em 0;
+}
+</style>
