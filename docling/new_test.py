@@ -99,10 +99,15 @@ def convert_pdf_to_markdown_with_images():
             table_counter += 1
             image_filename = output_dir / f"{doc_filename}-table-{table_counter}.png"
             table_df: pd.DataFrame = element.export_to_dataframe()
+
+            # 保留表格图像（但不插入到 Markdown）
             element.get_image(document).save(image_filename, "PNG")
-            markdown_lines.append(f"\n![Table {table_counter}](./{image_filename.name})\n")
+
+            # ❌ 不插入 ![图片]
+            # ✅ 保留 Markdown 表格文本
             markdown_lines.append(table_df.to_markdown(index=False))
             markdown_lines.append("")
+
             json_data.append({
                 "type": "table",
                 "level": level,
