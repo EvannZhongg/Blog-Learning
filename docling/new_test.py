@@ -13,6 +13,8 @@ from docling_core.types.doc import ImageRefMode, PictureItem, TableItem
 from docling.datamodel.pipeline_options import PdfPipelineOptions, RapidOcrOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 
+from prompt.prompt import VLM_PROMPT
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
@@ -28,7 +30,12 @@ output_dir.mkdir(parents=True, exist_ok=True)
 doc_filename = input_pdf_path.stem
 
 # === 图像→base64→VLM接口 ===
-def ask_image_vlm_base64(pil_image: Image.Image, prompt: str = "请描述这张图片") -> str:
+# === 顶部引入 ===
+from prompt.prompt import VLM_PROMPT
+
+
+# === 图像→base64→VLM接口 ===
+def ask_image_vlm_base64(pil_image: Image.Image, prompt: str = VLM_PROMPT) -> str:
     try:
         buffered = BytesIO()
         pil_image.save(buffered, format="JPEG")
@@ -48,6 +55,7 @@ def ask_image_vlm_base64(pil_image: Image.Image, prompt: str = "请描述这张�
     except Exception as e:
         log.warning(f"调用图像API失败: {e}")
         return "[图像描述失败]"
+
 
 # === 主处理函数 ===
 def convert_pdf_to_markdown_with_images():
