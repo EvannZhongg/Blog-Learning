@@ -15,7 +15,7 @@ from docling.document_converter import DocumentConverter, PdfFormatOption
 
 from prompt.prompt import VLM_PROMPT
 from prompt.text_type_prompt import TEXT_TYPE_PROMPT
-from prompt.table_repair_prompt import TABLE_REPAIR_PROMPT  # ✅ 新增导入
+from prompt.table_repair_prompt import TABLE_REPAIR_PROMPT 
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -93,6 +93,16 @@ def ask_if_heading(text: str) -> str:
         return "paragraph"
 
 
+# === 表格图像切块工具（按固定行高裁切） ===
+def split_table_image_rows(pil_img: Image.Image, row_height: int = 400) -> list:
+    width, height = pil_img.size
+    slices = []
+    for top in range(0, height, row_height):
+        bottom = min(top + row_height, height)
+        crop = pil_img.crop((0, top, width, bottom))
+        slices.append(crop)
+    return slices
+
 # === 主流程 ===
 def convert_pdf_to_markdown_with_images():
     start_time = time.time()
@@ -120,28 +130,43 @@ def convert_pdf_to_markdown_with_images():
         if isinstance(element, TableItem):
             table_counter += 1
             image_filename = output_dir / f"{doc_filename}-table-{table_counter}.png"
+            pil_img = element.get_image(document)
+            pil_img.save(image_filename, "PNG")
             table_df: pd.DataFrame = element.export_to_dataframe()
-            element.get_image(document).save(image_filename, "PNG")
 
-            # ✅ 检查失败条件：列名重复或列数 < 2
             if not table_df.columns.is_unique or table_df.shape[1] < 2:
-                duplicates = table_df.columns[table_df.columns.duplicated()].tolist()
-                log.warning(f"⚠️ 表格 {table_counter} 结构异常（重复列名或列数不足），调用 Qwen 视觉模型尝试修复...")
+                log.warning(f"⚠️ 表格 {table_counter} 结构异常，使用 Qwen 多轮图像推理修复")
 
-                recovered_md = ask_table_from_image(element.get_image(document))
-                markdown_lines.append(f"\n<!-- 表格 {table_counter} 使用 Qwen 修复 -->\n")
-                markdown_lines.append(recovered_md)
+                # 自动图像切块
+                sub_images = split_table_image_rows(pil_img)
+                all_chunks = []
+
+                for idx, chunk_img in enumerate(sub_images):
+                    chunk_md = ask_table_from_image(chunk_img)
+                    all_chunks.append(chunk_md.strip())
+
+                # 拼接多段 Markdown 表格（保留首段表头）
+                full_md_lines = []
+                for i, chunk in enumerate(all_chunks):
+                    lines = chunk.splitlines()
+                    if i == 0:
+                        full_md_lines.extend(lines)  # 保留表头 + 分割线
+                    else:
+                        full_md_lines.extend(lines[2:])  # 仅添加数据行
+
+                markdown_lines.append(f"\n<!-- 表格 {table_counter} 使用 Qwen 修复，已分块拼接 -->\n")
+                markdown_lines.append("\n".join(full_md_lines))
                 markdown_lines.append("")
                 json_data.append({
                     "type": "table",
                     "level": level,
                     "image": image_filename.name,
-                    "source": "reconstructed_by_qwen",
-                    "markdown": recovered_md
+                    "source": "reconstructed_by_qwen_chunked",
+                    "markdown": "\n".join(full_md_lines)
                 })
-                continue  # ⚠️ 跳过后续原始表格处理
+                continue  # 跳过原始处理
 
-            # ✅ 表格识别正常
+            # ✅ 表格结构正常
             markdown_lines.append(table_df.to_markdown(index=False))
             markdown_lines.append("")
             json_data.append({
@@ -171,10 +196,7 @@ def convert_pdf_to_markdown_with_images():
                 text = element.text.strip()
                 if text:
                     label = ask_if_heading(text)
-                    if label == "heading":
-                        markdown_lines.append(f"# {text}")
-                    else:
-                        markdown_lines.append(text)
+                    markdown_lines.append(f"# {text}" if label == "heading" else text)
                     markdown_lines.append("")
                     json_data.append({
                         "type": "text",
@@ -183,6 +205,7 @@ def convert_pdf_to_markdown_with_images():
                         "label": label
                     })
 
+    # 保存结果
     markdown_file = output_dir / f"{doc_filename}.md"
     with markdown_file.open("w", encoding="utf-8") as f:
         f.write("\n".join(markdown_lines))
@@ -194,7 +217,6 @@ def convert_pdf_to_markdown_with_images():
     log.info(f"✅ 完成 PDF 解析，耗时 {time.time() - start_time:.2f} 秒")
     log.info(f"📄 Markdown 文件：{markdown_file.resolve()}")
     log.info(f"📦 JSON 文件：{json_file.resolve()}")
-
 
 if __name__ == "__main__":
     convert_pdf_to_markdown_with_images()
