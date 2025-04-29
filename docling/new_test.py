@@ -15,7 +15,7 @@ from docling.document_converter import DocumentConverter, PdfFormatOption
 
 from prompt.prompt import VLM_PROMPT
 from prompt.text_type_prompt import TEXT_TYPE_PROMPT
-from prompt.table_repair_prompt import TABLE_REPAIR_PROMPT 
+from prompt.table_repair_prompt import TABLE_REPAIR_PROMPT
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -28,8 +28,8 @@ VLM_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 TEXT_API_KEY = "sk-e6412d3957f44da9b3774f7149860c15"
 TEXT_API_URL = "https://api.deepseek.com"
 
-input_pdf_path = Path("D:/Personal_Project/SmolDocling/pdfs/catalog_20220927_ALQ00013.pdf")
-output_dir = Path("D:/Personal_Project/SmolDocling/output")
+input_pdf_path = Path("D:/Personal_Project/SmolDocling/pdfs/APD_Series_203250D.pdf")
+output_dir = Path("D:/Personal_Project/SmolDocling/output3")
 output_dir.mkdir(parents=True, exist_ok=True)
 doc_filename = input_pdf_path.stem
 
@@ -102,6 +102,28 @@ def split_table_image_rows(pil_img: Image.Image, row_height: int = 400) -> list:
         crop = pil_img.crop((0, top, width, bottom))
         slices.append(crop)
     return slices
+
+# === 主流程 ===
+# === 图片描述 ===
+def ask_image_vlm_base64(pil_image: Image.Image, prompt: str = VLM_PROMPT) -> str:
+    try:
+        buffered = BytesIO()
+        pil_image.save(buffered, format="JPEG")
+        img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        client = OpenAI(api_key=DASHSCOPE_API_KEY, base_url=VLM_API_URL)
+        content = [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"}}
+        ]
+        completion = client.chat.completions.create(
+            model="qwen-vl-plus",
+            messages=[{"role": "user", "content": content}]
+        )
+        return completion.choices[0].message.content.strip()
+    except Exception as e:
+        log.warning(f"图像API失败: {e}")
+        return "[图像描述失败]"
+
 
 # === 主流程 ===
 def convert_pdf_to_markdown_with_images():
@@ -182,8 +204,9 @@ def convert_pdf_to_markdown_with_images():
             pil_img = element.get_image(document)
             pil_img.save(image_filename, "PNG")
             caption = ask_image_vlm_base64(pil_img)
-            markdown_lines.append(f"\n![Picture {picture_counter}](./{image_filename.name})\n")
-            markdown_lines.append(f"<!-- 图像描述：{caption} -->\n")
+
+            # 生成图片链接 + 描述为图片标题
+            markdown_lines.append(f"\n![{caption}](./{image_filename.name})\n")
             json_data.append({
                 "type": "picture",
                 "level": level,
@@ -205,7 +228,6 @@ def convert_pdf_to_markdown_with_images():
                         "label": label
                     })
 
-    # 保存结果
     markdown_file = output_dir / f"{doc_filename}.md"
     with markdown_file.open("w", encoding="utf-8") as f:
         f.write("\n".join(markdown_lines))
