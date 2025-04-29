@@ -47,7 +47,7 @@ def ask_table_from_image(pil_image: Image.Image, prompt: str = TABLE_REPAIR_PROM
             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"}}
         ]
         completion = client.chat.completions.create(
-            model="qwen-vl-plus",
+            model="qwen2.5-vl-72b-instruct",
             messages=[{"role": "user", "content": content}]
         )
         return completion.choices[0].message.content.strip()
@@ -102,27 +102,6 @@ def split_table_image_rows(pil_img: Image.Image, row_height: int = 400) -> list:
         crop = pil_img.crop((0, top, width, bottom))
         slices.append(crop)
     return slices
-
-# === 主流程 ===
-# === 图片描述 ===
-def ask_image_vlm_base64(pil_image: Image.Image, prompt: str = VLM_PROMPT) -> str:
-    try:
-        buffered = BytesIO()
-        pil_image.save(buffered, format="JPEG")
-        img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
-        client = OpenAI(api_key=DASHSCOPE_API_KEY, base_url=VLM_API_URL)
-        content = [
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"}}
-        ]
-        completion = client.chat.completions.create(
-            model="qwen-vl-plus",
-            messages=[{"role": "user", "content": content}]
-        )
-        return completion.choices[0].message.content.strip()
-    except Exception as e:
-        log.warning(f"图像API失败: {e}")
-        return "[图像描述失败]"
 
 
 # === 主流程 ===
@@ -184,7 +163,8 @@ def convert_pdf_to_markdown_with_images():
                     "level": level,
                     "image": image_filename.name,
                     "source": "reconstructed_by_qwen_chunked",
-                    "markdown": "\n".join(full_md_lines)
+                    "markdown": "\n".join(full_md_lines),
+                    "page_number": element.prov[0].page_no  # Add page number to JSON
                 })
                 continue  # 跳过原始处理
 
@@ -195,7 +175,8 @@ def convert_pdf_to_markdown_with_images():
                 "type": "table",
                 "level": level,
                 "image": image_filename.name,
-                "data": table_df.to_dict(orient="records")
+                "data": table_df.to_dict(orient="records"),
+                "page_number": element.prov[0].page_no  # Add page number to JSON
             })
 
         elif isinstance(element, PictureItem):
@@ -211,7 +192,8 @@ def convert_pdf_to_markdown_with_images():
                 "type": "picture",
                 "level": level,
                 "image": image_filename.name,
-                "caption": caption
+                "caption": caption,
+                "page_number": element.prov[0].page_no  # Add page number to JSON
             })
 
         else:
@@ -225,9 +207,11 @@ def convert_pdf_to_markdown_with_images():
                         "type": "text",
                         "level": level,
                         "text": text,
-                        "label": label
+                        "label": label,
+                        "page_number": element.prov[0].page_no  # Add page number to JSON
                     })
 
+    # 保存结果
     markdown_file = output_dir / f"{doc_filename}.md"
     with markdown_file.open("w", encoding="utf-8") as f:
         f.write("\n".join(markdown_lines))
